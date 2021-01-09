@@ -16,6 +16,15 @@ fn try_alloc_with_large_array() -> Result<(), ()> {
     Ok(())
 }
 
+#[test]
+#[cfg_attr(debug_assertions, ignore)]
+fn try_alloc_with_large_array_err() {
+    let b = Bump::new();
+
+    b.try_alloc_with(|| Result::<[u8; 10_000_000], _>::Err(()))
+        .unwrap_err();
+}
+
 #[allow(dead_code)]
 struct LargeStruct {
     small: usize,
@@ -43,6 +52,16 @@ fn try_alloc_with_large_struct() -> Result<(), ()> {
 
 #[test]
 #[cfg_attr(debug_assertions, ignore)]
+fn try_alloc_with_large_struct_err() {
+    let b = Bump::new();
+
+    assert!(b
+        .try_alloc_with(|| Result::<LargeStruct, _>::Err(()))
+        .is_err());
+}
+
+#[test]
+#[cfg_attr(debug_assertions, ignore)]
 fn try_alloc_with_large_tuple() -> Result<(), ()> {
     let b = Bump::new();
 
@@ -61,6 +80,16 @@ fn try_alloc_with_large_tuple() -> Result<(), ()> {
     Ok(())
 }
 
+#[test]
+#[cfg_attr(debug_assertions, ignore)]
+fn try_alloc_with_large_tuple_err() {
+    let b = Bump::new();
+
+    assert!(b
+        .try_alloc_with(|| { Result::<(u32, LargeStruct), _>::Err(()) })
+        .is_err());
+}
+
 #[allow(clippy::large_enum_variant)]
 enum LargeEnum {
     Small,
@@ -76,4 +105,14 @@ fn try_alloc_with_large_enum() -> Result<(), ()> {
     b.try_alloc_with(|| Ok(LargeEnum::Small))?;
 
     Ok(())
+}
+
+#[test]
+#[cfg_attr(debug_assertions, ignore)]
+fn try_alloc_with_large_enum_err() {
+    let b = Bump::new();
+
+    assert!(b
+        .try_alloc_with(|| Result::<LargeEnum, _>::Err(()))
+        .is_err());
 }
