@@ -647,6 +647,106 @@ impl Bump {
         }
     }
 
+    /// Pre-allocates space for a [`Result`] in this `Bump`, initializes it using
+    /// the closure, then returns an exclusive reference to its `T` if [`Ok`].
+    ///
+    /// Iff [`Err`], an allocator rewind is *attempted* and the `E` instance is
+    /// moved out of the allocator to be consumed or dropped as normal.
+    ///
+    /// Calling [`bump.alloc(f()?)`](`Self::alloc`) is essentially equivalent
+    /// to calling `bump.try_alloc_with(f)?` where [`E: Unpin`](`Unpin`).
+    /// However if you use `try_alloc_with`, then the closure will not be
+    /// invoked until after allocating space for storing `x` on the heap.
+    ///
+    /// This can be useful in certain edge-cases related to compiler
+    /// optimizations. When evaluating `bump.alloc(x)`, semantically `x` is
+    /// first put on the stack and then moved onto the heap. In some cases,
+    /// the compiler is able to optimize this into constructing `x` directly
+    /// on the heap, however in many cases it does not.
+    ///
+    /// The function `try_alloc_with` tries to help the compiler be smarter. In
+    /// most cases doing `bump.try_alloc_with(|| x)` on release mode will be
+    /// enough to help the compiler to realize this optimization is valid and
+    /// construct `x` directly onto the heap.
+    ///
+    /// ## Warning
+    ///
+    /// This function critically depends on compiler optimizations to achieve
+    /// its desired effect. This means that it is not an effective tool when
+    /// compiling without optimizations on.
+    ///
+    /// Even when optimizations are on, this function does not **guarantee**
+    /// that the value is constructed on the heap. To the best of our
+    /// knowledge no such guarantee can be made in stable Rust as of 1.44.
+    ///
+    /// Rewinding in the `Err` case will fail if `f` makes any additional
+    /// allocations in `self`.
+    ///
+    /// ## Errors
+    ///
+    /// Iff the allocation succeeds but `f` fails, that error is forwarded by value.
+    ///
+    /// ## Panics
+    ///
+    /// Panics if reserving space for `Result<T, E>` would cause an overflow.
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// let bump = bumpalo::Bump::new();
+    /// let x = bump.try_alloc_with(|| Ok("hello"))?;
+    /// assert_eq!(*x, "hello");
+    /// # Result::<_, ()>::Ok(())
+    /// ```
+    #[inline(always)]
+    #[allow(clippy::mut_from_ref)]
+    pub fn try_alloc_with<F, T, E>(&self, f: F) -> Result<&mut T, E>
+    where
+        F: FnOnce() -> Result<T, E>,
+        E: Unpin,
+    {
+        let rewind_footer = self.current_chunk_footer.get();
+        let rewind_ptr = unsafe { rewind_footer.as_ref() }.ptr.get();
+        let ptr = NonNull::from(self.alloc_with(f));
+        match unsafe { ptr.clone().as_mut() } {
+            Ok(t) => Ok(unsafe {
+                //SAFETY:
+                // The `&mut Result<T, E>` returned by `alloc_with` may be
+                // lifetime-limited by `E`, but the derived `&mut T` still has
+                // the same validity as in `alloc_with` since the error variant
+                // is already ruled out here.
+
+                // We could conditionally truncate the allocation here, but since
+                // it grows backwards, it seems unlikely that we'd get any more
+                // than the `Result`'s discriminant this way, if anything at all.
+                &mut *(t as *mut _)
+            }),
+            Err(e) => unsafe {
+                //SAFETY:
+                // As `E: Unpin`, we can just copy the value here as long as we
+                // avoid a double-drop (which can't happen as any specific
+                // references to the `E`'s data in `self` are destroyed when
+                // this function returns).
+                let current_footer_p = self.current_chunk_footer.get();
+                let current_ptr = &current_footer_p.as_ref().ptr;
+                if current_ptr.get() == ptr.cast() {
+                    // We can also reuse the memory, unless `f` made any
+                    // further allocations in `self`.
+                    if current_footer_p == rewind_footer {
+                        current_ptr.set(rewind_ptr)
+                    } else {
+                        // If the current chunk changed, we can at least reset
+                        // to its start, since we know no other allocations
+                        // happened.
+                        current_ptr.set(current_footer_p.as_ref().data)
+                    }
+                }
+                // The order doesn't matter because `Self: !Sync`.
+                Err(ptr::read(e as *const _))
+            },
+        }
+    }
+
     /// `Copy` a slice into this `Bump` and return an exclusive reference to
     /// the copy.
     ///

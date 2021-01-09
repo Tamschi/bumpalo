@@ -24,6 +24,25 @@ fn alloc_with<T: Default>(n: usize) {
     }
 }
 
+fn try_alloc_with<T: Default, E: Unpin>(n: usize) {
+    let arena = bumpalo::Bump::with_capacity(n * std::mem::size_of::<Result<T, E>>());
+    for _ in 0..n {
+        let arena = black_box(&arena);
+        let val: Result<&mut T, E> = arena.try_alloc_with(|| black_box(Ok(Default::default())));
+        let _ = black_box(val);
+    }
+}
+
+fn try_alloc_with_err<T, E: Default + Unpin>(n: usize) {
+    // Only enough capacity for one, since the allocation is undone.
+    let arena = bumpalo::Bump::with_capacity(std::mem::size_of::<Result<T, E>>());
+    for _ in 0..n {
+        let arena = black_box(&arena);
+        let val: Result<&mut T, E> = arena.try_alloc_with(|| black_box(Err(Default::default())));
+        let _ = black_box(val);
+    }
+}
+
 #[cfg(feature = "collections")]
 fn format_realloc(bump: &bumpalo::Bump, n: usize) {
     let n = criterion::black_box(n);
@@ -47,6 +66,40 @@ fn bench_alloc_with(c: &mut Criterion) {
     group.bench_function("big", |b| b.iter(|| alloc_with::<Big>(ALLOCATIONS)));
 }
 
+fn bench_try_alloc_with(c: &mut Criterion) {
+    let mut group = c.benchmark_group("try-alloc-with");
+    group.throughput(Throughput::Elements(ALLOCATIONS as u64));
+    group.bench_function("small, small", |b| {
+        b.iter(|| try_alloc_with::<Small, Small>(ALLOCATIONS))
+    });
+    group.bench_function("small, big", |b| {
+        b.iter(|| try_alloc_with::<Small, Big>(ALLOCATIONS))
+    });
+    group.bench_function("big, small", |b| {
+        b.iter(|| try_alloc_with::<Big, Small>(ALLOCATIONS))
+    });
+    group.bench_function("big, big", |b| {
+        b.iter(|| try_alloc_with::<Big, Big>(ALLOCATIONS))
+    });
+}
+
+fn bench_try_alloc_with_err(c: &mut Criterion) {
+    let mut group = c.benchmark_group("try-alloc-with-err");
+    group.throughput(Throughput::Elements(ALLOCATIONS as u64));
+    group.bench_function("small, small", |b| {
+        b.iter(|| try_alloc_with_err::<Small, Small>(ALLOCATIONS))
+    });
+    group.bench_function("small, big", |b| {
+        b.iter(|| try_alloc_with_err::<Small, Big>(ALLOCATIONS))
+    });
+    group.bench_function("big, small", |b| {
+        b.iter(|| try_alloc_with_err::<Big, Small>(ALLOCATIONS))
+    });
+    group.bench_function("big, big", |b| {
+        b.iter(|| try_alloc_with_err::<Big, Big>(ALLOCATIONS))
+    });
+}
+
 fn bench_format_realloc(c: &mut Criterion) {
     let mut group = c.benchmark_group("format-realloc");
 
@@ -62,5 +115,12 @@ fn bench_format_realloc(c: &mut Criterion) {
     }
 }
 
-criterion_group!(benches, bench_alloc, bench_alloc_with, bench_format_realloc);
+criterion_group!(
+    benches,
+    bench_alloc,
+    bench_alloc_with,
+    bench_try_alloc_with,
+    bench_try_alloc_with_err,
+    bench_format_realloc
+);
 criterion_main!(benches);
