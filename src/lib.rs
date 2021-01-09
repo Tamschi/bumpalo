@@ -653,11 +653,10 @@ impl Bump {
     /// Iff [`Err`], an allocator rewind is *attempted* and the `E` instance is
     /// moved out of the allocator to be consumed or dropped as normal.
     ///
-    /// Calling [`bump.alloc(x)?`](`Self::alloc`) where `E: Copy` is essentially
-    /// equivalent to calling `bump.try_alloc_with(|| x)?` where `E: Unpin`.
+    /// Calling [`bump.alloc(f()?)`](`Self::alloc`) is essentially equivalent
+    /// to calling `bump.try_alloc_with(f)?` where [`E: Unpin`](`Unpin`).
     /// However if you use `try_alloc_with`, then the closure will not be
-    /// invoked until after allocating space for storing `x` on the heap, and
-    /// overall memory usage of your program may end up lower.
+    /// invoked until after allocating space for storing `x` on the heap.
     ///
     /// This can be useful in certain edge-cases related to compiler
     /// optimizations. When evaluating `bump.alloc(x)`, semantically `x` is
@@ -666,9 +665,9 @@ impl Bump {
     /// on the heap, however in many cases it does not.
     ///
     /// The function `try_alloc_with` tries to help the compiler be smarter. In
-    /// most cases doing `bump.alloc_with(|| x)` on release mode will be enough
-    /// to help the compiler to realize this optimization is valid and construct
-    /// `x` directly onto the heap.
+    /// most cases doing `bump.try_alloc_with(|| x)` on release mode will be
+    /// enough to help the compiler to realize this optimization is valid and
+    /// construct `x` directly onto the heap.
     ///
     /// ## Warning
     ///
@@ -717,17 +716,17 @@ impl Bump {
                 // the same validity as in `alloc_with` since the error variant
                 // is already ruled out here.
 
-                // We could truncate the allocation here, but since it grows
-                // backwards, it seems unlikely that we'd get any more than the
-                // `Result`'s discriminant this way, if anything at all.
+                // We could conditionally truncate the allocation here, but since
+                // it grows backwards, it seems unlikely that we'd get any more
+                // than the `Result`'s discriminant this way, if anything at all.
                 &mut *(t as *mut _)
             }),
             Err(e) => unsafe {
                 //SAFETY:
                 // As `E: Unpin`, we can just copy the value here as long as we
-                // avoid a double-drop (which can't happen as any references to
-                // the `E`'s data in `self` are destroyed when this function
-                // returns).
+                // avoid a double-drop (which can't happen as any specific
+                // references to the `E`'s data in `self` are destroyed when
+                // this function returns).
                 let current_footer_p = self.current_chunk_footer.get();
                 let current_ptr = &current_footer_p.as_ref().ptr;
                 if current_ptr.get() == ptr.cast() {
