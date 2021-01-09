@@ -21,8 +21,9 @@ fn try_alloc_with_large_array() -> Result<(), ()> {
 fn try_alloc_with_large_array_err() {
     let b = Bump::new();
 
-    b.try_alloc_with(|| Result::<[u8; 10_000_000], _>::Err(()))
-        .unwrap_err();
+    assert!(b
+        .try_alloc_with(|| Result::<[u8; 10_000_000], _>::Err(()))
+        .is_err());
 }
 
 #[allow(dead_code)]
