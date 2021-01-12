@@ -1,4 +1,4 @@
-// All of these try_alloc_with tests will fail with "fatal runtime error: stack overflow" unless
+// All of these alloc_try_with tests will fail with "fatal runtime error: stack overflow" unless
 // LLVM manages to optimize the stack writes away.
 //
 // We only run them when debug_assertions are not set, as we expect them to fail outside release
@@ -8,21 +8,21 @@ use bumpalo::Bump;
 
 #[test]
 #[cfg_attr(debug_assertions, ignore)]
-fn try_alloc_with_large_array() -> Result<(), ()> {
+fn alloc_try_with_large_array() -> Result<(), ()> {
     let b = Bump::new();
 
-    b.try_alloc_with(|| Ok([4u8; 10_000_000]))?;
+    b.alloc_try_with(|| Ok([4u8; 10_000_000]))?;
 
     Ok(())
 }
 
 #[test]
 #[cfg_attr(debug_assertions, ignore)]
-fn try_alloc_with_large_array_err() {
+fn alloc_try_with_large_array_err() {
     let b = Bump::new();
 
     assert!(b
-        .try_alloc_with(|| Result::<[u8; 10_000_000], _>::Err(()))
+        .alloc_try_with(|| Result::<[u8; 10_000_000], _>::Err(()))
         .is_err());
 }
 
@@ -36,10 +36,10 @@ struct LargeStruct {
 
 #[test]
 #[cfg_attr(debug_assertions, ignore)]
-fn try_alloc_with_large_struct() -> Result<(), ()> {
+fn alloc_try_with_large_struct() -> Result<(), ()> {
     let b = Bump::new();
 
-    b.try_alloc_with(|| {
+    b.alloc_try_with(|| {
         Ok(LargeStruct {
             small: 1,
             big1: [2; 20_000_000],
@@ -53,20 +53,20 @@ fn try_alloc_with_large_struct() -> Result<(), ()> {
 
 #[test]
 #[cfg_attr(debug_assertions, ignore)]
-fn try_alloc_with_large_struct_err() {
+fn alloc_try_with_large_struct_err() {
     let b = Bump::new();
 
     assert!(b
-        .try_alloc_with(|| Result::<LargeStruct, _>::Err(()))
+        .alloc_try_with(|| Result::<LargeStruct, _>::Err(()))
         .is_err());
 }
 
 #[test]
 #[cfg_attr(debug_assertions, ignore)]
-fn try_alloc_with_large_tuple() -> Result<(), ()> {
+fn alloc_try_with_large_tuple() -> Result<(), ()> {
     let b = Bump::new();
 
-    b.try_alloc_with(|| {
+    b.alloc_try_with(|| {
         Ok((
             1u32,
             LargeStruct {
@@ -83,11 +83,11 @@ fn try_alloc_with_large_tuple() -> Result<(), ()> {
 
 #[test]
 #[cfg_attr(debug_assertions, ignore)]
-fn try_alloc_with_large_tuple_err() {
+fn alloc_try_with_large_tuple_err() {
     let b = Bump::new();
 
     assert!(b
-        .try_alloc_with(|| { Result::<(u32, LargeStruct), _>::Err(()) })
+        .alloc_try_with(|| { Result::<(u32, LargeStruct), _>::Err(()) })
         .is_err());
 }
 
@@ -100,20 +100,20 @@ enum LargeEnum {
 
 #[test]
 #[cfg_attr(debug_assertions, ignore)]
-fn try_alloc_with_large_enum() -> Result<(), ()> {
+fn alloc_try_with_large_enum() -> Result<(), ()> {
     let b = Bump::new();
 
-    b.try_alloc_with(|| Ok(LargeEnum::Small))?;
+    b.alloc_try_with(|| Ok(LargeEnum::Small))?;
 
     Ok(())
 }
 
 #[test]
 #[cfg_attr(debug_assertions, ignore)]
-fn try_alloc_with_large_enum_err() {
+fn alloc_try_with_large_enum_err() {
     let b = Bump::new();
 
     assert!(b
-        .try_alloc_with(|| Result::<LargeEnum, _>::Err(()))
+        .alloc_try_with(|| Result::<LargeEnum, _>::Err(()))
         .is_err());
 }

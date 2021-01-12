@@ -654,8 +654,8 @@ impl Bump {
     /// moved out of the allocator to be consumed or dropped as normal.
     ///
     /// Calling [`bump.alloc(f()?)`](`Self::alloc`) is essentially equivalent
-    /// to calling `bump.try_alloc_with(f)?` where [`E: Unpin`](`Unpin`).
-    /// However if you use `try_alloc_with`, then the closure will not be
+    /// to calling `bump.alloc_try_with(f)?` where [`E: Unpin`](`Unpin`).
+    /// However if you use `alloc_try_with`, then the closure will not be
     /// invoked until after allocating space for storing `x` on the heap.
     ///
     /// This can be useful in certain edge-cases related to compiler
@@ -664,8 +664,8 @@ impl Bump {
     /// the compiler is able to optimize this into constructing `x` directly
     /// on the heap, however in many cases it does not.
     ///
-    /// The function `try_alloc_with` tries to help the compiler be smarter. In
-    /// most cases doing `bump.try_alloc_with(|| x)` on release mode will be
+    /// The function `alloc_try_with` tries to help the compiler be smarter. In
+    /// most cases doing `bump.alloc_try_with(|| x)` on release mode will be
     /// enough to help the compiler to realize this optimization is valid and
     /// construct `x` directly onto the heap.
     ///
@@ -694,13 +694,13 @@ impl Bump {
     ///
     /// ```
     /// let bump = bumpalo::Bump::new();
-    /// let x = bump.try_alloc_with(|| Ok("hello"))?;
+    /// let x = bump.alloc_try_with(|| Ok("hello"))?;
     /// assert_eq!(*x, "hello");
     /// # Result::<_, ()>::Ok(())
     /// ```
     #[inline(always)]
     #[allow(clippy::mut_from_ref)]
-    pub fn try_alloc_with<F, T, E>(&self, f: F) -> Result<&mut T, E>
+    pub fn alloc_try_with<F, T, E>(&self, f: F) -> Result<&mut T, E>
     where
         F: FnOnce() -> Result<T, E>,
         E: Unpin,
