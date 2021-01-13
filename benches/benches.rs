@@ -43,6 +43,15 @@ fn alloc_try_with_err<T, E: Default + Unpin>(n: usize) {
     }
 }
 
+fn try_alloc_with<T: Default>(n: usize) {
+    let arena = bumpalo::Bump::with_capacity(n * std::mem::size_of::<T>());
+    for _ in 0..n {
+        let arena = black_box(&arena);
+        let val: Result<&mut T, _> = arena.try_alloc_with(|| black_box(Default::default()));
+        let _ = black_box(val);
+    }
+}
+
 #[cfg(feature = "collections")]
 fn format_realloc(bump: &bumpalo::Bump, n: usize) {
     let n = criterion::black_box(n);
@@ -100,6 +109,13 @@ fn bench_alloc_try_with_err(c: &mut Criterion) {
     });
 }
 
+fn bench_try_alloc_with(c: &mut Criterion) {
+    let mut group = c.benchmark_group("try-alloc-with");
+    group.throughput(Throughput::Elements(ALLOCATIONS as u64));
+    group.bench_function("small", |b| b.iter(|| try_alloc_with::<Small>(ALLOCATIONS)));
+    group.bench_function("big", |b| b.iter(|| try_alloc_with::<Big>(ALLOCATIONS)));
+}
+
 fn bench_format_realloc(c: &mut Criterion) {
     let mut group = c.benchmark_group("format-realloc");
 
@@ -121,6 +137,7 @@ criterion_group!(
     bench_alloc_with,
     bench_alloc_try_with,
     bench_alloc_try_with_err,
+    bench_try_alloc_with,
     bench_format_realloc
 );
 criterion_main!(benches);
