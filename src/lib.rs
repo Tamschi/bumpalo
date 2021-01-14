@@ -573,6 +573,26 @@ impl Bump {
         self.alloc_with(|| val)
     }
 
+    /// Try to allocate an object in this `Bump` and return an exclusive
+    /// reference to it.
+    ///
+    /// ## Errors
+    ///
+    /// Errors if reserving space for `T` would cause an overflow.
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// let bump = bumpalo::Bump::new();
+    /// let x = bump.try_alloc("hello");
+    /// assert_eq!(x, Ok(&mut"hello"));
+    /// ```
+    #[inline(always)]
+    #[allow(clippy::mut_from_ref)]
+    pub fn try_alloc<T>(&self, val: T) -> Result<&mut T, alloc::AllocErr> {
+        self.try_alloc_with(|| val)
+    }
+
     /// Pre-allocate space for an object in this `Bump`, initializes it using
     /// the closure, then returns an exclusive reference to it.
     ///
@@ -650,8 +670,7 @@ impl Bump {
     /// Tries to pre-allocate space for an object in this `Bump`, initializes
     /// it using the closure, then returns an exclusive reference to it.
     ///
-    //TODO: Fix or remove the example here. Should there be a try_alloc method?
-    /// Calling `bump.alloc(x)` is essentially equivalent to calling
+    /// Calling `bump.try_alloc(x)` is essentially equivalent to calling
     /// `bump.try_alloc_with(|| x)`. However if you use `try_alloc_with`, then the
     /// closure will not be invoked until after allocating space for storing
     /// `x` on the heap.
