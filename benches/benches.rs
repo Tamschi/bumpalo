@@ -65,7 +65,7 @@ fn try_alloc_try_with<T: Default, E: Unpin>(n: usize) {
     let arena = bumpalo::Bump::with_capacity(n * std::mem::size_of::<Result<T, E>>());
     for _ in 0..n {
         let arena = black_box(&arena);
-        let val: Result<&mut T, bumpalo::TryAllocTryWithError<E>> =
+        let val: Result<&mut T, bumpalo::AllocOrInitError<E>> =
             arena.try_alloc_try_with(|| black_box(Ok(Default::default())));
         let _ = black_box(val);
     }
@@ -76,7 +76,7 @@ fn try_alloc_try_with_err<T, E: Default + Unpin>(n: usize) {
     let arena = bumpalo::Bump::with_capacity(std::mem::size_of::<Result<T, E>>());
     for _ in 0..n {
         let arena = black_box(&arena);
-        let val: Result<&mut T, bumpalo::TryAllocTryWithError<E>> =
+        let val: Result<&mut T, bumpalo::AllocOrInitError<E>> =
             arena.try_alloc_try_with(|| black_box(Err(Default::default())));
         let _ = black_box(val);
     }

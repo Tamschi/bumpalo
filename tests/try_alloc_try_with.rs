@@ -4,7 +4,7 @@
 // We only run them when debug_assertions are not set, as we expect them to fail outside release
 // mode.
 
-use bumpalo::{Bump, TryAllocTryWithError};
+use bumpalo::{Bump, AllocOrInitError};
 
 #[test]
 #[cfg_attr(debug_assertions, ignore)]
@@ -15,7 +15,7 @@ fn try_alloc_try_with_oom() {
 
 #[test]
 #[cfg_attr(debug_assertions, ignore)]
-fn try_alloc_try_with_large_array() -> Result<(), TryAllocTryWithError<()>> {
+fn try_alloc_try_with_large_array() -> Result<(), AllocOrInitError<()>> {
     let b = Bump::new();
 
     b.try_alloc_try_with(|| Ok([4u8; 10_000_000]))?;
@@ -43,7 +43,7 @@ struct LargeStruct {
 
 #[test]
 #[cfg_attr(debug_assertions, ignore)]
-fn try_alloc_try_with_large_struct() -> Result<(), TryAllocTryWithError<()>> {
+fn try_alloc_try_with_large_struct() -> Result<(), AllocOrInitError<()>> {
     let b = Bump::new();
 
     b.try_alloc_try_with(|| {
@@ -70,7 +70,7 @@ fn try_alloc_try_with_large_struct_err() {
 
 #[test]
 #[cfg_attr(debug_assertions, ignore)]
-fn try_alloc_try_with_large_tuple() -> Result<(), TryAllocTryWithError<()>> {
+fn try_alloc_try_with_large_tuple() -> Result<(), AllocOrInitError<()>> {
     let b = Bump::new();
 
     b.try_alloc_try_with(|| {
@@ -107,7 +107,7 @@ enum LargeEnum {
 
 #[test]
 #[cfg_attr(debug_assertions, ignore)]
-fn try_alloc_try_with_large_enum() -> Result<(), TryAllocTryWithError<()>> {
+fn try_alloc_try_with_large_enum() -> Result<(), AllocOrInitError<()>> {
     let b = Bump::new();
 
     b.try_alloc_try_with(|| Ok(LargeEnum::Small))?;

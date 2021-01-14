@@ -190,7 +190,7 @@ use core_alloc::alloc::{alloc, dealloc, Layout};
 
 /// An error returned from [`Bump::try_alloc_try_with`].
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub enum TryAllocTryWithError<E> {
+pub enum AllocOrInitError<E> {
     /// Indicates that the initial allocation failed.
     Alloc(alloc::AllocErr),
     /// Indicates that the initializer failed after allocation with the
@@ -200,7 +200,7 @@ pub enum TryAllocTryWithError<E> {
     /// released back to the allocator at this point.
     Init(E),
 }
-impl<E> From<alloc::AllocErr> for TryAllocTryWithError<E> {
+impl<E> From<alloc::AllocErr> for AllocOrInitError<E> {
     fn from(e: alloc::AllocErr) -> Self {
         Self::Alloc(e)
     }
@@ -902,11 +902,11 @@ impl Bump {
     ///
     /// ## Errors
     ///
-    /// Errors with the [`Alloc`](`TryAllocTryWithError::Alloc`) variant if
+    /// Errors with the [`Alloc`](`AllocOrInitError::Alloc`) variant if
     /// reserving space for `Result<T, E>` would cause an overflow.
     ///
     /// Iff the allocation succeeds but `f` fails, that error is forwarded by
-    /// value inside the [`Init`](`TryAllocTryWithError::Init`) variant.
+    /// value inside the [`Init`](`AllocOrInitError::Init`) variant.
     ///
     /// ## Example
     ///
@@ -918,7 +918,7 @@ impl Bump {
     /// ```
     #[inline(always)]
     #[allow(clippy::mut_from_ref)]
-    pub fn try_alloc_try_with<F, T, E>(&self, f: F) -> Result<&mut T, TryAllocTryWithError<E>>
+    pub fn try_alloc_try_with<F, T, E>(&self, f: F) -> Result<&mut T, AllocOrInitError<E>>
     where
         F: FnOnce() -> Result<T, E>,
         E: Unpin,
@@ -960,7 +960,7 @@ impl Bump {
                     }
                 }
                 // The order doesn't matter because `Self: !Sync`.
-                Err(TryAllocTryWithError::Init(ptr::read(e as *const _)))
+                Err(AllocOrInitError::Init(ptr::read(e as *const _)))
             },
         }
     }
