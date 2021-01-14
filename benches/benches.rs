@@ -43,6 +43,15 @@ fn alloc_try_with_err<T, E: Default + Unpin>(n: usize) {
     }
 }
 
+fn try_alloc<T: Default>(n: usize) {
+    let arena = bumpalo::Bump::with_capacity(n * std::mem::size_of::<T>());
+    for _ in 0..n {
+        let arena = black_box(&arena);
+        let val: Result<&mut T, _> = arena.try_alloc(black_box(Default::default()));
+        black_box(val);
+    }
+}
+
 fn try_alloc_with<T: Default>(n: usize) {
     let arena = bumpalo::Bump::with_capacity(n * std::mem::size_of::<T>());
     for _ in 0..n {
@@ -56,7 +65,8 @@ fn try_alloc_try_with<T: Default, E: Unpin>(n: usize) {
     let arena = bumpalo::Bump::with_capacity(n * std::mem::size_of::<Result<T, E>>());
     for _ in 0..n {
         let arena = black_box(&arena);
-        let val: Result<&mut T, bumpalo::TryAllocTryWithError<E>> = arena.try_alloc_try_with(|| black_box(Ok(Default::default())));
+        let val: Result<&mut T, bumpalo::TryAllocTryWithError<E>> =
+            arena.try_alloc_try_with(|| black_box(Ok(Default::default())));
         let _ = black_box(val);
     }
 }
@@ -129,6 +139,13 @@ fn bench_alloc_try_with_err(c: &mut Criterion) {
     });
 }
 
+fn bench_try_alloc(c: &mut Criterion) {
+    let mut group = c.benchmark_group("try-alloc");
+    group.throughput(Throughput::Elements(ALLOCATIONS as u64));
+    group.bench_function("small", |b| b.iter(|| try_alloc::<Small>(ALLOCATIONS)));
+    group.bench_function("big", |b| b.iter(|| try_alloc::<Big>(ALLOCATIONS)));
+}
+
 fn bench_try_alloc_with(c: &mut Criterion) {
     let mut group = c.benchmark_group("try-alloc-with");
     group.throughput(Throughput::Elements(ALLOCATIONS as u64));
@@ -191,6 +208,7 @@ criterion_group!(
     bench_alloc_with,
     bench_alloc_try_with,
     bench_alloc_try_with_err,
+    bench_try_alloc,
     bench_try_alloc_with,
     bench_try_alloc_try_with,
     bench_try_alloc_try_with_err,

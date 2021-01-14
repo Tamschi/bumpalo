@@ -591,6 +591,7 @@ impl Bump {
         self.alloc_with(|| val)
     }
 
+    //TODO: Tests
     /// Try to allocate an object in this `Bump` and return an exclusive
     /// reference to it.
     ///
