@@ -8,13 +8,6 @@ use bumpalo::Bump;
 
 #[test]
 #[cfg_attr(debug_assertions, ignore)]
-#[should_panic(expected = "out of memory")]
-fn try_alloc_with_oom() {
-    todo!()
-}
-
-#[test]
-#[cfg_attr(debug_assertions, ignore)]
 fn try_alloc_with_large_array() {
     let b = Bump::new();
 

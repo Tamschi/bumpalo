@@ -1,4 +1,4 @@
-use bumpalo::Bump;
+use bumpalo::{AllocOrInitError, Bump};
 use rand::Rng;
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -91,6 +91,36 @@ fn main() {
         };
     }
 
+    fn test_static_size_alloc(assert_alloc_ok: fn(bump: &Bump), assert_alloc_err: fn(bump: &Bump)) {
+        // Unlike with `try_alloc_layout`, it's not that easy to test a variety
+        // of size/capacity combinations here.
+        // Since nothing in Bump is really random, and we have to start fresh
+        // each time, just checking each case once is enough.
+        for &fail_alloc in &[false, true] {
+            let bump = GLOBAL_ALLOCATOR.with_successful_allocs(|| {
+                // We can't query the remaining space in the current chunk,
+                // so we have to create a new Bump for each test and fill it to
+                // the brink of a new allocation.
+                let bump = Bump::try_new().unwrap();
+
+                // Bump preallocates space in the initial chunk, so we need to
+                // use up this block prior to the actual test
+                let layout = Layout::from_size_align(bump.chunk_capacity(), 1).unwrap();
+                assert!(bump.try_alloc_layout(layout).is_ok());
+
+                bump
+            });
+
+            GLOBAL_ALLOCATOR.set_returning_null(fail_alloc);
+
+            if fail_alloc {
+                assert_alloc_err(&bump)
+            } else {
+                assert_alloc_ok(&bump)
+            }
+        }
+    }
+
     let tests = [
         test!("Bump::try_new fails when global allocator fails", || {
             GLOBAL_ALLOCATOR.with_alloc_failures(|| {
@@ -136,34 +166,47 @@ fn main() {
         test!(
             "test try_alloc with and without global allocation failures",
             || {
-                const NUM_TESTS: usize = 5000;
-
-                let mut rng = rand::thread_rng();
-
-                for _ in 0..NUM_TESTS {
-                    let bump = GLOBAL_ALLOCATOR.with_successful_allocs(|| {
-                        // We can't query the remaining space in the current chunk,
-                        // so we have to create a new Bump for each test and fill it just enough.
-                        let bump = Bump::try_new().unwrap();
-
-                        // Bump preallocates space in the initial chunk, so we need to
-                        // use up this block prior to the actual test
-                        let layout = Layout::from_size_align(bump.chunk_capacity(), 1).unwrap();
-                        assert!(bump.try_alloc_layout(layout).is_ok());
-
-                        bump
-                    });
-
-                    if rng.gen() {
-                        GLOBAL_ALLOCATOR.toggle_returning_null();
-                    }
-
-                    if GLOBAL_ALLOCATOR.is_returning_null() {
-                        assert!(bump.try_alloc(1u8).is_err());
-                    } else {
-                        assert!(bump.try_alloc(1u8).is_ok());
-                    }
-                }
+                test_static_size_alloc(
+                    |bump| assert!(bump.try_alloc(1u8).is_ok()),
+                    |bump| assert!(bump.try_alloc(1u8).is_err()),
+                )
+            },
+        ),
+        test!(
+            "test try_alloc_with with and without global allocation failures",
+            || {
+                test_static_size_alloc(
+                    |bump| assert!(bump.try_alloc_with(|| 1u8).is_ok()),
+                    |bump| assert!(bump.try_alloc_with(|| 1u8).is_err()),
+                )
+            },
+        ),
+        test!(
+            "test try_alloc_try_with (Ok) with and without global allocation failures",
+            || {
+                test_static_size_alloc(
+                    |bump| assert!(bump.try_alloc_try_with::<_, _, ()>(|| Ok(1u8)).is_ok()),
+                    |bump| assert!(bump.try_alloc_try_with::<_, _, ()>(|| Ok(1u8)).is_err()),
+                )
+            },
+        ),
+        test!(
+            "test try_alloc_try_with (Err) with and without global allocation failures",
+            || {
+                test_static_size_alloc(
+                    |bump| {
+                        assert!(matches!(
+                            bump.try_alloc_try_with::<_, u8, _>(|| Err(())),
+                            Err(AllocOrInitError::Init(_))
+                        ))
+                    },
+                    |bump| {
+                        assert!(matches!(
+                            bump.try_alloc_try_with::<_, u8, _>(|| Err(())),
+                            Err(AllocOrInitError::Alloc(_))
+                        ))
+                    },
+                )
             },
         ),
         #[cfg(feature = "collections")]
