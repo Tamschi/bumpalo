@@ -48,7 +48,7 @@ fn try_alloc<T: Default>(n: usize) {
     for _ in 0..n {
         let arena = black_box(&arena);
         let val: Result<&mut T, _> = arena.try_alloc(black_box(Default::default()));
-        black_box(val);
+        let _ = black_box(val);
     }
 }
 
