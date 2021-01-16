@@ -180,6 +180,7 @@ pub mod collections;
 mod alloc;
 
 use core::cell::Cell;
+use core::fmt::Display;
 use core::iter;
 use core::marker::PhantomData;
 use core::mem;
@@ -203,6 +204,14 @@ pub enum AllocOrInitError<E> {
 impl<E> From<alloc::AllocErr> for AllocOrInitError<E> {
     fn from(e: alloc::AllocErr) -> Self {
         Self::Alloc(e)
+    }
+}
+impl<E: Display> Display for AllocOrInitError<E> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            AllocOrInitError::Alloc(err) => err.fmt(f),
+            AllocOrInitError::Init(err) => write!(f, "initialization failed: {}", err),
+        }
     }
 }
 
