@@ -722,8 +722,8 @@ impl Bump {
     ///
     /// ```
     /// let bump = bumpalo::Bump::new();
-    /// let x = bump.alloc_with(|| "hello");
-    /// assert_eq!(*x, "hello");
+    /// let x = bump.try_alloc_with(|| "hello");
+    /// assert_eq!(x, Ok(&mut "hello"));
     /// ```
     #[inline(always)]
     #[allow(clippy::mut_from_ref)]
@@ -911,9 +911,9 @@ impl Bump {
     ///
     /// ```
     /// let bump = bumpalo::Bump::new();
-    /// let x = bump.alloc_try_with(|| Ok("hello"))?;
+    /// let x = bump.try_alloc_try_with(|| Ok("hello"))?;
     /// assert_eq!(*x, "hello");
-    /// # Result::<_, ()>::Ok(())
+    /// # Result::<_, bumpalo::AllocOrInitError<()>>::Ok(())
     /// ```
     #[inline(always)]
     #[allow(clippy::mut_from_ref)]
