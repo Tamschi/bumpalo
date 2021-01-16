@@ -133,6 +133,39 @@ fn main() {
                 }
             },
         ),
+        test!(
+            "test try_alloc with and without global allocation failures",
+            || {
+                const NUM_TESTS: usize = 5000;
+
+                let mut rng = rand::thread_rng();
+
+                for _ in 0..NUM_TESTS {
+                    let bump = GLOBAL_ALLOCATOR.with_successful_allocs(|| {
+                        // We can't query the remaining space in the current chunk,
+                        // so we have to create a new Bump for each test and fill it just enough.
+                        let bump = Bump::try_new().unwrap();
+
+                        // Bump preallocates space in the initial chunk, so we need to
+                        // use up this block prior to the actual test
+                        let layout = Layout::from_size_align(bump.chunk_capacity(), 1).unwrap();
+                        assert!(bump.try_alloc_layout(layout).is_ok());
+
+                        bump
+                    });
+
+                    if rng.gen() {
+                        GLOBAL_ALLOCATOR.toggle_returning_null();
+                    }
+
+                    if GLOBAL_ALLOCATOR.is_returning_null() {
+                        assert!(bump.try_alloc(1u8).is_err());
+                    } else {
+                        assert!(bump.try_alloc(1u8).is_ok());
+                    }
+                }
+            },
+        ),
         #[cfg(feature = "collections")]
         test!("test Vec::try_reserve and Vec::try_reserve_exact", || {
             use bumpalo::collections::Vec;
