@@ -1,5 +1,5 @@
-// All of these try_alloc_with tests will fail with "fatal runtime error: stack overflow" unless
-// LLVM manages to optimize the stack writes away.
+// All of these try_alloc_with tests will fail with "fatal runtime error: stack overflow" unless LLVM
+// manages to optimize the stack writes away.
 //
 // We only run them when debug_assertions are not set, as we expect them to fail outside release
 // mode.
@@ -8,22 +8,10 @@ use bumpalo::Bump;
 
 #[test]
 #[cfg_attr(debug_assertions, ignore)]
-fn try_alloc_with_large_array() -> Result<(), ()> {
+fn try_alloc_with_large_array() {
     let b = Bump::new();
 
-    b.try_alloc_with(|| Ok([4u8; 10_000_000]))?;
-
-    Ok(())
-}
-
-#[test]
-#[cfg_attr(debug_assertions, ignore)]
-fn try_alloc_with_large_array_err() {
-    let b = Bump::new();
-
-    assert!(b
-        .try_alloc_with(|| Result::<[u8; 10_000_000], _>::Err(()))
-        .is_err());
+    b.try_alloc_with(|| [4u8; 10_000_000]).unwrap();
 }
 
 #[allow(dead_code)]
@@ -36,38 +24,25 @@ struct LargeStruct {
 
 #[test]
 #[cfg_attr(debug_assertions, ignore)]
-fn try_alloc_with_large_struct() -> Result<(), ()> {
+fn try_alloc_with_large_struct() {
     let b = Bump::new();
 
-    b.try_alloc_with(|| {
-        Ok(LargeStruct {
-            small: 1,
-            big1: [2; 20_000_000],
-            big2: [3; 20_000_000],
-            big3: [4; 20_000_000],
-        })
-    })?;
-
-    Ok(())
+    b.try_alloc_with(|| LargeStruct {
+        small: 1,
+        big1: [2; 20_000_000],
+        big2: [3; 20_000_000],
+        big3: [4; 20_000_000],
+    })
+    .unwrap();
 }
 
 #[test]
 #[cfg_attr(debug_assertions, ignore)]
-fn try_alloc_with_large_struct_err() {
-    let b = Bump::new();
-
-    assert!(b
-        .try_alloc_with(|| Result::<LargeStruct, _>::Err(()))
-        .is_err());
-}
-
-#[test]
-#[cfg_attr(debug_assertions, ignore)]
-fn try_alloc_with_large_tuple() -> Result<(), ()> {
+fn try_alloc_with_large_tuple() {
     let b = Bump::new();
 
     b.try_alloc_with(|| {
-        Ok((
+        (
             1u32,
             LargeStruct {
                 small: 2,
@@ -75,23 +50,11 @@ fn try_alloc_with_large_tuple() -> Result<(), ()> {
                 big2: [4; 20_000_000],
                 big3: [5; 20_000_000],
             },
-        ))
-    })?;
-
-    Ok(())
+        )
+    })
+    .unwrap();
 }
 
-#[test]
-#[cfg_attr(debug_assertions, ignore)]
-fn try_alloc_with_large_tuple_err() {
-    let b = Bump::new();
-
-    assert!(b
-        .try_alloc_with(|| { Result::<(u32, LargeStruct), _>::Err(()) })
-        .is_err());
-}
-
-#[allow(clippy::large_enum_variant)]
 enum LargeEnum {
     Small,
     #[allow(dead_code)]
@@ -100,20 +63,8 @@ enum LargeEnum {
 
 #[test]
 #[cfg_attr(debug_assertions, ignore)]
-fn try_alloc_with_large_enum() -> Result<(), ()> {
+fn try_alloc_with_large_enum() {
     let b = Bump::new();
 
-    b.try_alloc_with(|| Ok(LargeEnum::Small))?;
-
-    Ok(())
-}
-
-#[test]
-#[cfg_attr(debug_assertions, ignore)]
-fn try_alloc_with_large_enum_err() {
-    let b = Bump::new();
-
-    assert!(b
-        .try_alloc_with(|| Result::<LargeEnum, _>::Err(()))
-        .is_err());
+    b.try_alloc_with(|| LargeEnum::Small).unwrap();
 }
