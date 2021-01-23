@@ -24,7 +24,7 @@ fn alloc_with<T: Default>(n: usize) {
     }
 }
 
-fn alloc_try_with<T: Default, E: Unpin>(n: usize) {
+fn alloc_try_with<T: Default, E>(n: usize) {
     let arena = bumpalo::Bump::with_capacity(n * std::mem::size_of::<Result<T, E>>());
     for _ in 0..n {
         let arena = black_box(&arena);
@@ -33,7 +33,7 @@ fn alloc_try_with<T: Default, E: Unpin>(n: usize) {
     }
 }
 
-fn alloc_try_with_err<T, E: Default + Unpin>(n: usize) {
+fn alloc_try_with_err<T, E: Default>(n: usize) {
     // Only enough capacity for one, since the allocation is undone.
     let arena = bumpalo::Bump::with_capacity(std::mem::size_of::<Result<T, E>>());
     for _ in 0..n {
@@ -61,7 +61,7 @@ fn try_alloc_with<T: Default>(n: usize) {
     }
 }
 
-fn try_alloc_try_with<T: Default, E: Unpin>(n: usize) {
+fn try_alloc_try_with<T: Default, E>(n: usize) {
     let arena = bumpalo::Bump::with_capacity(n * std::mem::size_of::<Result<T, E>>());
     for _ in 0..n {
         let arena = black_box(&arena);
@@ -71,7 +71,7 @@ fn try_alloc_try_with<T: Default, E: Unpin>(n: usize) {
     }
 }
 
-fn try_alloc_try_with_err<T, E: Default + Unpin>(n: usize) {
+fn try_alloc_try_with_err<T, E: Default>(n: usize) {
     // Only enough capacity for one, since the allocation is undone.
     let arena = bumpalo::Bump::with_capacity(std::mem::size_of::<Result<T, E>>());
     for _ in 0..n {

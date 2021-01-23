@@ -833,9 +833,9 @@ impl Bump {
     /// moved out of the allocator to be consumed or dropped as normal.
     ///
     /// Calling [`bump.alloc(f()?)`](`Self::alloc`) is essentially equivalent
-    /// to calling `bump.alloc_try_with(f)?` where [`E: Unpin`](`Unpin`).
-    /// However if you use `alloc_try_with`, then the closure will not be
-    /// invoked until after allocating space for storing `x` on the heap.
+    /// to calling `bump.alloc_try_with(f)?`. However if you use
+    /// `alloc_try_with`, then the closure will not be invoked until after
+    /// allocating space for storing `x` on the heap.
     ///
     /// This can be useful in certain edge-cases related to compiler
     /// optimizations. When evaluating `bump.alloc(x)`, semantically `x` is
@@ -882,7 +882,6 @@ impl Bump {
     pub fn alloc_try_with<F, T, E>(&self, f: F) -> Result<&mut T, E>
     where
         F: FnOnce() -> Result<T, E>,
-        E: Unpin,
     {
         let rewind_footer = self.current_chunk_footer.get();
         let rewind_ptr = unsafe { rewind_footer.as_ref() }.ptr.get();
@@ -903,10 +902,10 @@ impl Bump {
             }),
             Err(e) => unsafe {
                 //SAFETY:
-                // As `E: Unpin`, we can just copy the value here as long as we
-                // avoid a double-drop (which can't happen as any specific
-                // references to the `E`'s data in `self` are destroyed when
-                // this function returns).
+                // As we received `E` semantically by value from `f`, we can just
+                // copy that value here as long as we avoid a double-drop (which
+                // can't happen as any specific references to the `E`'s data in
+                // `self` are destroyed when this function returns).
                 let current_footer_p = self.current_chunk_footer.get();
                 let current_ptr = &current_footer_p.as_ref().ptr;
                 if current_ptr.get().as_ptr() as usize == inner_result_address {
@@ -938,9 +937,9 @@ impl Bump {
     /// moved out of the allocator to be consumed or dropped as normal.
     ///
     /// Calling [`bump.try_alloc(f()?)`](`Self::alloc`) is essentially equivalent
-    /// to calling `bump.try_alloc_try_with(f)?` where [`E: Unpin`](`Unpin`).
-    /// However if you use `try_alloc_try_with`, then the closure will not be
-    /// invoked until after allocating space for storing `x` on the heap.
+    /// to calling `bump.try_alloc_try_with(f)?`. However if you use
+    /// `try_alloc_try_with`, then the closure will not be invoked until after
+    /// allocating space for storing `x` on the heap.
     ///
     /// This can be useful in certain edge-cases related to compiler
     /// optimizations. When evaluating `bump.try_alloc(x)`, semantically `x` is
@@ -987,7 +986,6 @@ impl Bump {
     pub fn try_alloc_try_with<F, T, E>(&self, f: F) -> Result<&mut T, AllocOrInitError<E>>
     where
         F: FnOnce() -> Result<T, E>,
-        E: Unpin,
     {
         let rewind_footer = self.current_chunk_footer.get();
         let rewind_ptr = unsafe { rewind_footer.as_ref() }.ptr.get();
@@ -1008,10 +1006,10 @@ impl Bump {
             }),
             Err(e) => unsafe {
                 //SAFETY:
-                // As `E: Unpin`, we can just copy the value here as long as we
-                // avoid a double-drop (which can't happen as any specific
-                // references to the `E`'s data in `self` are destroyed when
-                // this function returns).
+                // As we received `E` semantically by value from `f`, we can just
+                // copy that value here as long as we avoid a double-drop (which
+                // can't happen as any specific references to the `E`'s data in
+                // `self` are destroyed when this function returns).
                 let current_footer_p = self.current_chunk_footer.get();
                 let current_ptr = &current_footer_p.as_ref().ptr;
                 if current_ptr.get().as_ptr() as usize == inner_result_address {
