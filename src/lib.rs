@@ -886,8 +886,9 @@ impl Bump {
     {
         let rewind_footer = self.current_chunk_footer.get();
         let rewind_ptr = unsafe { rewind_footer.as_ref() }.ptr.get();
-        let ptr = NonNull::from(self.alloc_with(f));
-        match unsafe { ptr.clone().as_mut() } {
+        let mut inner_result_ptr = NonNull::from(self.alloc_with(f));
+        let inner_result_address = inner_result_ptr.as_ptr() as usize;
+        match unsafe { inner_result_ptr.as_mut() } {
             Ok(t) => Ok(unsafe {
                 //SAFETY:
                 // The `&mut Result<T, E>` returned by `alloc_with` may be
@@ -908,7 +909,7 @@ impl Bump {
                 // this function returns).
                 let current_footer_p = self.current_chunk_footer.get();
                 let current_ptr = &current_footer_p.as_ref().ptr;
-                if current_ptr.get() == ptr.cast() {
+                if current_ptr.get().as_ptr() as usize == inner_result_address {
                     // We can also reuse the memory, unless `f` made any
                     // further allocations in `self`.
                     if current_footer_p == rewind_footer {
@@ -916,7 +917,8 @@ impl Bump {
                     } else {
                         // If the current chunk changed, we can at least reset
                         // to its start, since we know no other allocations
-                        // happened (because `current_ptr` still matched `ptr`).
+                        // happened (because `current_ptr` still matches
+                        // `inner_result_address`).
                         current_ptr.set(current_footer_p.as_ref().data)
                     }
                 }
@@ -989,8 +991,9 @@ impl Bump {
     {
         let rewind_footer = self.current_chunk_footer.get();
         let rewind_ptr = unsafe { rewind_footer.as_ref() }.ptr.get();
-        let ptr = NonNull::from(self.try_alloc_with(f)?);
-        match unsafe { ptr.clone().as_mut() } {
+        let mut inner_result_ptr = NonNull::from(self.try_alloc_with(f)?);
+        let inner_result_address = inner_result_ptr.as_ptr() as usize;
+        match unsafe { inner_result_ptr.as_mut() } {
             Ok(t) => Ok(unsafe {
                 //SAFETY:
                 // The `&mut Result<T, E>` returned by `alloc_with` may be
@@ -1011,7 +1014,7 @@ impl Bump {
                 // this function returns).
                 let current_footer_p = self.current_chunk_footer.get();
                 let current_ptr = &current_footer_p.as_ref().ptr;
-                if current_ptr.get() == ptr.cast() {
+                if current_ptr.get().as_ptr() as usize == inner_result_address {
                     // We can also reuse the memory, unless `f` made any
                     // further allocations in `self`.
                     if current_footer_p == rewind_footer {
@@ -1019,7 +1022,8 @@ impl Bump {
                     } else {
                         // If the current chunk changed, we can at least reset
                         // to its start, since we know no other allocations
-                        // happened (because `current_ptr` still matched `ptr`).
+                        // happened (because `current_ptr` still matches
+                        // `inner_result_address`).
                         current_ptr.set(current_footer_p.as_ref().data)
                     }
                 }
