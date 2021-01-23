@@ -250,8 +250,8 @@ use core_alloc::alloc::{AllocError, Allocator};
 pub enum AllocOrInitError<E> {
     /// Indicates that the initial allocation failed.
     Alloc(alloc::AllocErr),
-    /// Indicates that the initializer failed after allocation with the
-    /// contained error.
+    /// Indicates that the initializer failed with the contained error after
+    /// allocation.
     ///
     /// It is possible but not guaranteed that the allocated memory has been
     /// released back to the allocator at this point.
@@ -342,8 +342,8 @@ impl<E: Display> Display for AllocOrInitError<E> {
 ///
 /// The `*alloc_with` functions try to help the compiler be smarter. In most
 /// cases doing for example `bump.try_alloc_with(|| x)` on release mode will be
-/// enough to help the compiler to realize this optimization is valid and
-/// construct `x` directly onto the heap.
+/// enough to help the compiler realize that this optimization is valid and
+/// to construct `x` directly onto the heap.
 ///
 /// ### Warning
 ///
@@ -375,7 +375,7 @@ impl<E: Display> Display for AllocOrInitError<E> {
 /// in <code>self</code>.</summary>
 ///
 /// For example, the following will always leak also space for the [`Result`]
-/// into this `Bump`, even though the inner reference isn't held and the [`Err`]
+/// into this `Bump`, even though the inner reference isn't kept and the [`Err`]
 /// payload is returned semantically by value:
 ///
 /// ```rust
@@ -941,8 +941,9 @@ impl Bump {
     ///
     /// Iff the allocation fails, the closure is not run.
     ///
-    /// Iff [`Err`], an allocator rewind is *attempted* and the `E` instance is
-    /// moved out of the allocator to be consumed or dropped as normal.
+    /// Iff the closure returns [`Err`], an allocator rewind is *attempted* and
+    /// the `E` instance is moved out of the allocator to be consumed or dropped
+    /// as normal.
     ///
     /// See [The `_with` Method Suffix](#the-_with-method-suffix) for a
     /// discussion on the differences between the `_with` suffixed methods and
