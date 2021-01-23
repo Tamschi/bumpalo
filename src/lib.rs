@@ -916,7 +916,7 @@ impl Bump {
                     } else {
                         // If the current chunk changed, we can at least reset
                         // to its start, since we know no other allocations
-                        // happened.
+                        // happened (because `current_ptr` still matched `ptr`).
                         current_ptr.set(current_footer_p.as_ref().data)
                     }
                 }
@@ -1019,7 +1019,7 @@ impl Bump {
                     } else {
                         // If the current chunk changed, we can at least reset
                         // to its start, since we know no other allocations
-                        // happened.
+                        // happened (because `current_ptr` still matched `ptr`).
                         current_ptr.set(current_footer_p.as_ref().data)
                     }
                 }
