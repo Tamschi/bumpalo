@@ -641,7 +641,7 @@ impl Bump {
     ///
     /// ## Panics
     ///
-    /// Panics if reserving space for `T` would cause an overflow.
+    /// Panics if reserving space for `T` fails.
     ///
     /// ## Example
     ///
@@ -661,7 +661,7 @@ impl Bump {
     ///
     /// ## Errors
     ///
-    /// Errors if reserving space for `T` would cause an overflow.
+    /// Errors if reserving space for `T` fails.
     ///
     /// ## Example
     ///
@@ -707,7 +707,7 @@ impl Bump {
     ///
     /// ## Panics
     ///
-    /// Panics if reserving space for `T` would cause an overflow.
+    /// Panics if reserving space for `T` fails.
     ///
     /// ## Example
     ///
@@ -781,7 +781,7 @@ impl Bump {
     ///
     /// ## Errors
     ///
-    /// Errors if reserving space for `T` would cause an overflow.
+    /// Errors if reserving space for `T` fails.
     ///
     /// ## Example
     ///
@@ -867,7 +867,7 @@ impl Bump {
     ///
     /// ## Panics
     ///
-    /// Panics if reserving space for `Result<T, E>` would cause an overflow.
+    /// Panics if reserving space for `Result<T, E>` fails.
     ///
     /// ## Example
     ///
@@ -968,8 +968,8 @@ impl Bump {
     ///
     /// ## Errors
     ///
-    /// Errors with the [`Alloc`](`AllocOrInitError::Alloc`) variant if
-    /// reserving space for `Result<T, E>` would cause an overflow.
+    /// Errors with the [`Alloc`](`AllocOrInitError::Alloc`) variant iff
+    /// reserving space for `Result<T, E>` fails.
     ///
     /// Iff the allocation succeeds but `f` fails, that error is forwarded by
     /// value inside the [`Init`](`AllocOrInitError::Init`) variant.
@@ -1038,7 +1038,7 @@ impl Bump {
     ///
     /// ## Panics
     ///
-    /// Panics if reserving space for the slice would cause an overflow.
+    /// Panics if reserving space for the slice fails.
     ///
     /// ## Example
     ///
@@ -1067,7 +1067,7 @@ impl Bump {
     ///
     /// ## Panics
     ///
-    /// Panics if reserving space for the slice would cause an overflow.
+    /// Panics if reserving space for the slice fails.
     ///
     /// ## Example
     ///
@@ -1109,7 +1109,7 @@ impl Bump {
     ///
     /// ## Panics
     ///
-    /// Panics if reserving space for the string would cause an overflow.
+    /// Panics if reserving space for the string fails.
     ///
     /// ## Example
     ///
@@ -1136,7 +1136,7 @@ impl Bump {
     ///
     /// ## Panics
     ///
-    /// Panics if reserving space for the slice would cause an overflow.
+    /// Panics if reserving space for the slice fails.
     ///
     /// ## Example
     ///
@@ -1172,7 +1172,7 @@ impl Bump {
     ///
     /// ## Panics
     ///
-    /// Panics if reserving space for the slice would cause an overflow.
+    /// Panics if reserving space for the slice fails.
     ///
     /// ## Example
     ///
@@ -1194,7 +1194,7 @@ impl Bump {
     ///
     /// ## Panics
     ///
-    /// Panics if reserving space for the slice would cause an overflow.
+    /// Panics if reserving space for the slice fails.
     ///
     /// ## Example
     ///
@@ -1219,7 +1219,7 @@ impl Bump {
     ///
     /// ## Panics
     ///
-    /// Panics if reserving space for the slice would cause an overflow, or if the supplied
+    /// Panics if reserving space for the slice fails, or if the supplied
     /// iterator returns fewer elements than it promised.
     ///
     /// ## Example
@@ -1249,7 +1249,7 @@ impl Bump {
     ///
     /// ## Panics
     ///
-    /// Panics if reserving space for the slice would cause an overflow.
+    /// Panics if reserving space for the slice fails.
     ///
     /// ## Example
     ///
@@ -1269,6 +1269,10 @@ impl Bump {
     /// The returned pointer points at uninitialized memory, and should be
     /// initialized with
     /// [`std::ptr::write`](https://doc.rust-lang.org/std/ptr/fn.write.html).
+    ///
+    /// # Panics
+    ///
+    /// Panics if reserving space matching `layout` fails.
     #[inline(always)]
     pub fn alloc_layout(&self, layout: Layout) -> NonNull<u8> {
         self.try_alloc_layout(layout).unwrap_or_else(|_| oom())
@@ -1280,6 +1284,10 @@ impl Bump {
     /// The returned pointer points at uninitialized memory, and should be
     /// initialized with
     /// [`std::ptr::write`](https://doc.rust-lang.org/std/ptr/fn.write.html).
+    ///
+    /// # Errors
+    ///
+    /// Errors if reserving space matching `layout` fails.
     #[inline(always)]
     pub fn try_alloc_layout(&self, layout: Layout) -> Result<NonNull<u8>, alloc::AllocErr> {
         if let Some(p) = self.try_alloc_layout_fast(layout) {
