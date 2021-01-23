@@ -330,9 +330,9 @@ impl<E: Display> Display for AllocOrInitError<E> {
 /// ## The `_with` Method Suffix
 ///
 /// Calling one of the generic `…alloc(x)` methods is essentially equivalent to
-/// the matching `…alloc_with(|| x)`. However if you use `…alloc_with`, then
-/// the closure will not be invoked until after allocating space for storing `x`
-/// on the heap.
+/// the matching [`…alloc_with(|| x)`](?search=alloc_with). However if you use
+/// `…alloc_with`, then the closure will not be invoked until after allocating
+/// space for storing `x` on the heap.
 ///
 /// This can be useful in certain edge-cases related to compiler optimizations.
 /// When evaluating for example `bump.alloc(x)`, semantically `x` is first put
