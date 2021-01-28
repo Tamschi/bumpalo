@@ -98,7 +98,7 @@ fn main() {
         // each time, just checking each case once is enough.
         for &fail_alloc in &[false, true] {
             let bump = GLOBAL_ALLOCATOR.with_successful_allocs(|| {
-                // We can't query the remaining space in the current chunk,
+                // We can't query the remaining free space in the current chunk,
                 // so we have to create a new Bump for each test and fill it to
                 // the brink of a new allocation.
                 let bump = Bump::try_new().unwrap();
