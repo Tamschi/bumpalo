@@ -903,33 +903,55 @@ impl Bump {
                 // the same validity as in `alloc_with` since the error variant
                 // is already ruled out here.
 
-                // We could conditionally truncate the allocation here, but since
-                // it grows backwards, it seems unlikely that we'd get any more
-                // than the `Result`'s discriminant this way, if anything at all.
+                // We could conditionally truncate the allocation here, but
+                // since it grows backwards, it seems unlikely that we'd get
+                // any more than the `Result`'s discriminant this way, if
+                // anything at all.
                 &mut *(t as *mut _)
             }),
             Err(e) => unsafe {
-                //SAFETY:
-                // As we received `E` semantically by value from `f`, we can just
-                // copy that value here as long as we avoid a double-drop (which
-                // can't happen as any specific references to the `E`'s data in
-                // `self` are destroyed when this function returns).
-                let current_footer_p = self.current_chunk_footer.get();
-                let current_ptr = &current_footer_p.as_ref().ptr;
-                if current_ptr.get().as_ptr() as usize == inner_result_address {
-                    // We can also reuse the memory, unless `f` made any
-                    // further allocations in `self`.
+                // If this result was the last allocation in this arena, we can
+                // reclaim its space. In fact, sometimes we can do even better
+                // than simply calling `dealloc` on the result pointer: we can
+                // reclaim any alignment padding we might have added (which
+                // `dealloc` cannot do) if we didn't allocate a new chunk for
+                // this result.
+                if self.is_last_allocation(NonNull::new_unchecked(inner_result_address as *mut _)) {
+                    let current_footer_p = self.current_chunk_footer.get();
+                    let current_ptr = &current_footer_p.as_ref().ptr;
                     if current_footer_p == rewind_footer {
-                        current_ptr.set(rewind_ptr)
+                        // It's still the same chunk, so reset the bump pointer
+                        // to its original value upon entry to this method
+                        // (reclaiming any alignment padding we may have
+                        // added).
+                        current_ptr.set(rewind_ptr);
                     } else {
-                        // If the current chunk changed, we can at least reset
-                        // to its start, since we know no other allocations
-                        // happened (because `current_ptr` still matches
-                        // `inner_result_address`).
-                        current_ptr.set(current_footer_p.as_ref().data)
+                        // We allocated a new chunk for this result.
+                        //
+                        // We know the result is the only allocation in this
+                        // chunk: Any additional allocations since the start of
+                        // this method could only have happened when running
+                        // the initializer function, which is called *after*
+                        // reserving space for this result. Therefore, since we
+                        // already determined via the check above that this
+                        // result was the last allocation, there must not have
+                        // been any other allocations, and this result is the
+                        // only allocation in this chunk.
+                        //
+                        // Because this is the only allocation in this chunk,
+                        // we can reset the chunk's bump finger to the start of
+                        // the chunk.
+                        current_ptr.set(current_footer_p.as_ref().data);
                     }
                 }
-                // The order doesn't matter because `Self: !Sync`.
+                //SAFETY:
+                // As we received `E` semantically by value from `f`, we can
+                // just copy that value here as long as we avoid a double-drop
+                // (which can't happen as any specific references to the `E`'s
+                // data in `self` are destroyed when this function returns).
+                //
+                // The order between this and the deallocation doesn't matter
+                // because `Self: !Sync`.
                 Err(ptr::read(e as *const _))
             },
         }
@@ -987,33 +1009,55 @@ impl Bump {
                 // the same validity as in `alloc_with` since the error variant
                 // is already ruled out here.
 
-                // We could conditionally truncate the allocation here, but since
-                // it grows backwards, it seems unlikely that we'd get any more
-                // than the `Result`'s discriminant this way, if anything at all.
+                // We could conditionally truncate the allocation here, but
+                // since it grows backwards, it seems unlikely that we'd get
+                // any more than the `Result`'s discriminant this way, if
+                // anything at all.
                 &mut *(t as *mut _)
             }),
             Err(e) => unsafe {
-                //SAFETY:
-                // As we received `E` semantically by value from `f`, we can just
-                // copy that value here as long as we avoid a double-drop (which
-                // can't happen as any specific references to the `E`'s data in
-                // `self` are destroyed when this function returns).
-                let current_footer_p = self.current_chunk_footer.get();
-                let current_ptr = &current_footer_p.as_ref().ptr;
-                if current_ptr.get().as_ptr() as usize == inner_result_address {
-                    // We can also reuse the memory, unless `f` made any
-                    // further allocations in `self`.
+                // If this result was the last allocation in this arena, we can
+                // reclaim its space. In fact, sometimes we can do even better
+                // than simply calling `dealloc` on the result pointer: we can
+                // reclaim any alignment padding we might have added (which
+                // `dealloc` cannot do) if we didn't allocate a new chunk for
+                // this result.
+                if self.is_last_allocation(NonNull::new_unchecked(inner_result_address as *mut _)) {
+                    let current_footer_p = self.current_chunk_footer.get();
+                    let current_ptr = &current_footer_p.as_ref().ptr;
                     if current_footer_p == rewind_footer {
-                        current_ptr.set(rewind_ptr)
+                        // It's still the same chunk, so reset the bump pointer
+                        // to its original value upon entry to this method
+                        // (reclaiming any alignment padding we may have
+                        // added).
+                        current_ptr.set(rewind_ptr);
                     } else {
-                        // If the current chunk changed, we can at least reset
-                        // to its start, since we know no other allocations
-                        // happened (because `current_ptr` still matches
-                        // `inner_result_address`).
-                        current_ptr.set(current_footer_p.as_ref().data)
+                        // We allocated a new chunk for this result.
+                        //
+                        // We know the result is the only allocation in this
+                        // chunk: Any additional allocations since the start of
+                        // this method could only have happened when running
+                        // the initializer function, which is called *after*
+                        // reserving space for this result. Therefore, since we
+                        // already determined via the check above that this
+                        // result was the last allocation, there must not have
+                        // been any other allocations, and this result is the
+                        // only allocation in this chunk.
+                        //
+                        // Because this is the only allocation in this chunk,
+                        // we can reset the chunk's bump finger to the start of
+                        // the chunk.
+                        current_ptr.set(current_footer_p.as_ref().data);
                     }
                 }
-                // The order doesn't matter because `Self: !Sync`.
+                //SAFETY:
+                // As we received `E` semantically by value from `f`, we can
+                // just copy that value here as long as we avoid a double-drop
+                // (which can't happen as any specific references to the `E`'s
+                // data in `self` are destroyed when this function returns).
+                //
+                // The order between this and the deallocation doesn't matter
+                // because `Self: !Sync`.
                 Err(AllocOrInitError::Init(ptr::read(e as *const _)))
             },
         }
